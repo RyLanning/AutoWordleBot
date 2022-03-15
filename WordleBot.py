@@ -4,25 +4,29 @@ from random import choice
 def WordleBot():
     word_list = extract_word_list()
     Introductions()
-    solution = choice(word_list)
-
-    # solve_wordle(word_list)
+    average = 0
+    for x in range(1, 100):
+        average += solve_wordle(word_list)
+    print(average/100)
 
 
 def grade_guess(solution, guess):
     grade = ''
     list_guess = list(guess)
     list_solution = list(solution)
-
+    seen_letters = []
     for letter in list_guess:
         solution_appearances = [x for x, v in enumerate(solution) if v == letter]
-        if letter in solution_appearances:
-            if guess.index(letter) in solution_appearances:
-                grade += f'{letter}3'
+        guess_appearances = [x for x, v in enumerate(guess) if v == letter]
+        if letter in solution:
+            guess_index = guess_appearances[seen_letters.count(letter)]
+            if guess_index in solution_appearances:
+                grade += f'{letter}3 '
             else:
-                grade += f'{letter}1'
+                grade += f'{letter}1 '
         else:
-            grade += f'{letter}0'
+            grade += f'{letter}0 '
+        seen_letters.append(letter)
     return grade
 
 
@@ -53,8 +57,13 @@ def solve_wordle(word_list):
         the_word[x] = ['', []]
     word_contains = []
     word_does_not_contain = []
+    solution = choice(word_list)
+    score = 0
+    print(f'####SOLUTION####: \'{solution}\'')
+    bot_guess = grade_guess(solution, 'irate')
     while len(viable_words) > 1:
-        guess = input('Enter your guess: ')
+        guess = bot_guess
+        print(f'Guessing: \'{guess}\'...')
         guess_list = list(guess.replace(' ', ''))
         for x in range(0, 9):
             if x % 2 == 0:
@@ -65,46 +74,64 @@ def solve_wordle(word_list):
                         if the_word[num][0] == guess_list[x]:
                             is_green_elsewhere = True
                     if not is_green_elsewhere:
-                        the_word[num][1].append(guess_list[x])
+                        for num in range(0, 5):
+                            the_word[num][1].append(guess_list[x])
                         word_does_not_contain.append(guess_list[x])
                 if guess_list[x + 1] == '1':
                     word_contains.append(guess_list[x])
                     the_word[index][1].append(guess_list[x])
                 if guess_list[x + 1] == '3':
                     the_word[index][0] = guess_list[x]
-        print(the_word)
-        print(f'Number of possible solutions before input: {len(viable_words)}')
+        print(f'Data gathered from this guess: {the_word}')
+        print(f'Number of possible solutions before filtering: {len(viable_words)}')
         for word in word_list:
             # Check we have all known yellow letters
-            contains_all_yellow_letters = True
-            word_to_list = list(word)
-            for letter in word_contains:
-                if letter not in word_to_list:
-                    contains_all_yellow_letters = False
-            if not contains_all_yellow_letters and word in viable_words:
-                viable_words.remove(word)
+            if len(word_contains) >0:
+                contains_all_yellow_letters = True
+                word_to_list = list(word)
+                for letter in word_contains:
+                    if letter not in word_to_list:
+                        contains_all_yellow_letters = False
+                if not contains_all_yellow_letters and word in viable_words:
+                    viable_words.remove(word)
+                    if word == solution:
+                        print(f'!!!!!!!YELLOW WEEDED SOLUTION: {solution}')
 
             for index in range(0, 5):
-                # Any words with yellow letters in the same spot are not viable
-                for yellow_letter in the_word[index][1]:
-                    if yellow_letter in word and word.index(yellow_letter) == index and word in viable_words:
-                        viable_words.remove(word)
+                if len(word_contains) > 0:
+                    # Any words with yellow letters in the same spot are not viable
+                    for yellow_letter in the_word[index][1]:
+                        yellow_char_appearances = [x for x, v in enumerate(word) if v == yellow_letter]
+                        if yellow_letter in word and index in yellow_char_appearances and word in viable_words:
+                            viable_words.remove(word)
+                            if word == solution:
+                                print(f'!!!!!!!YELLOW2 WEEDED SOLUTION: {solution}')
                 # If we have green letters, make sure the word has them and that they're in the right spot.
                 if not the_word[index][0] == '' and the_word[index][0] not in word and word in viable_words:
                     viable_words.remove(word)
+                    if word == solution:
+                        print(f'!!!!!!!GREEN WEEDED SOLUTION: {solution}')
 
                 if not the_word[index][0] == '' and the_word[index][0] in word and word in viable_words:
                     char_appearances = [x for x, v in enumerate(word) if v == the_word[index][0]]
                     if index not in char_appearances and word in viable_words:
                         viable_words.remove(word)
+                        if word == solution:
+                            print(f'!!!!!!!GREEN2 WEEDED SOLUTION: {solution}')
 
                 # Check we don't have any uncontained letters
                 if the_word[index][1] is not None:
                     for uncontained_letter in word_does_not_contain:
                         if uncontained_letter in word and word in viable_words:
                             viable_words.remove(word)
+                            if word == solution:
+                                print(f'!!!!!!!UNCONTAINED WEEDED SOLUTION: {solution}')
         print(f'Number of possible solutions after input: {len(viable_words)}')
-        print(f'Remaining possible solutions: {viable_words}')
+        # print(f'Remaining possible solutions: {viable_words}')
+        bot_guess = grade_guess(solution, viable_words[0])
+        score += 1
+    print(f'Game over, XXXXXXXXXX SCORE: {score} XXXXXXXXXX\n\n')
+    return score
 
 
 if __name__ == '__main__':
